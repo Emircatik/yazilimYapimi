@@ -1,37 +1,41 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const path = require('path');
+const app = express();
+const cors = require('cors');
 
-import Login from "./Login";
-import Register from "./Register";
-import ForgotPassword from "./ForgotPassword";
-import Quiz from "./Quiz";
-import Layout from "./Layout";
-import CreateQuestion from "./CreateQuestion";
-import Stats from "./Stats";
+app.use(cors());
+app.use(bodyParser.json());
 
-function App() {
-  const token = localStorage.getItem('token');
+// Serve static files from the "static" directory
+app.use(express.static(path.join(__dirname, 'static')));
 
-  if (!token && window.location.pathname !== '/login' && window.location.pathname !== '/register' && window.location.pathname !== '/forgot-password') {
-    return window.location.href = '/login';
-  }
+mongoose.connect('mongodb+srv://admin:123@word-memorization.nw7tn7j.mongodb.net/?retryWrites=true&w=majority&appName=word-memorization');
 
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Quiz />} />
-          <Route path="*" element={<Quiz />} />
-          <Route path="login" element={<Login />} />
-          <Route path="register" element={<Register />} />
-          <Route path="forgot-password" element={<ForgotPassword />} />
-          <Route path="quiz" element={<Quiz />} />
-          <Route path="create-question" element={<CreateQuestion />} />
-          <Route path="stats" element={<Stats />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
-  );
-}
+const db = mongoose.connection;
+db.once('open', () => {
+  console.log('Connected to the database');
+});
 
-export default App;
+// Import routes
+const authRoutes = require('./routes/auth');
+const wordRoutes = require('./routes/words');
+const quizRoutes = require('./routes/quiz');
+const uploadRoutes = require('./routes/upload');
+
+// Use routes
+app.use('/auth', authRoutes);
+app.use('/words', wordRoutes);
+app.use('/quiz', quizRoutes);
+app.use('/upload', uploadRoutes);
+
+// database reset endpoint
+app.get('/reset', async (req, res) => { 
+  await mongoose.connection.dropDatabase();
+  res.send('Database reset');
+});
+
+app.listen(8000, () => {
+  console.log('Server running on http://localhost:8000');
+});
